@@ -13,32 +13,22 @@ ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 try:
     # Connect to the remote server
     ssh.connect(hostname, username=username, password=password)
-
-    # Create an interactive shell session
-    channel = ssh.invoke_shell()
-
-    # Enter screen session
-    channel.send('x fu' + '\n')
-    time.sleep(2)  # Wait for screen session to start
-
-    # Run command inside screen session
-    channel.send('show port all' + '\n')
-    output = ""
-    time.sleep(4)
-    output += channel.recv(4096).decode("utf-8")
-    print(output)
-
-    # Exit screen session (Ctrl+A, then D)
-    channel.send('\x01')  # Ctrl+A
-    channel.send('d')     # D
-    time.sleep(1)
-
-    # Run netstat
-    channel.send('forallx uptime')
-    output = ""
-    time.sleep(1)
-    output += channel.recv(4096).decode("utf-8")
-    print('\n\n\n'+output)
+    channel = ssh.invoke_shell(width=1000, height=1000)
+    print("Running command")
+    channel.send("stress-ng --vm 8 --vm-bytes 80% -t 1m" + "\n")
+    while channel.exit_status_ready() is False:
+        print("not yet")
+        time.sleep(0.1)
+    print("Command finished")
+    # Above commmand takes a random time to complete ranging from 2 to 5 minutes how to know if it as finished running or not
+    channel.send("ls -s /sys/devices/system/edac/mc/mc0" + "\n")
+    result = ""
+    while channel.exit_status_ready() is False:
+        time.sleep(0.1)
+    if channel.recv_ready() is True:
+        result += channel.recv(4096).decode("utf-8")
+    channel.close()
+    print(result)
 
 finally:
     # Close the SSH connection

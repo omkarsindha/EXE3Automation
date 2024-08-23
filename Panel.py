@@ -107,6 +107,7 @@ class Panel(wx.Panel):
 
         bottom_ssh = paramiko.SSHClient()
         bottom_ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
         try:
             top_ssh.connect(ip1, port=port, username="root", password="evertz", timeout=3)
             bottom_ssh.connect(ip2, port=port, username="root", password="evertz", timeout=3)
@@ -140,36 +141,57 @@ class Panel(wx.Panel):
             time.sleep(delay)
 
         result = self.run_commands(top_ssh, ["screen -x sc", "z", "99", "6", "1", "", ""])
-        self.print_filter_result("TOP-FC", result, "x sc")
+        self.print_filter_result("TOP-FC", result, "Routes by sources")
         time.sleep(delay)
+
         result = self.run_commands(top_ssh, ["screen -x sc", "z", "99", "6", "5", ""])
-        self.print_filter_result("TOP-FC", result, "x sc")
+        self.print_filter_result("TOP-FC", result, "User Defect Cache")
         time.sleep(delay)
+
         result = self.run_commands(top_ssh, ["screen -x sc", "z", "99", "6", "6", ""])
-        self.print_filter_result("TOP-FC", result, "x sc")
+        self.print_filter_result("TOP-FC", result, "Defective Switch")
         time.sleep(delay)
+
         result = self.run_commands(top_ssh, ["screen -x sc", "z", "99", "6", "8", ""])
-        self.print_filter_result("TOP-FC", result, "x sc")
+        self.print_filter_result("TOP-FC", result, "Detected defective ports")
         time.sleep(delay)
-        result = self.run_commands(top_ssh, ["screen -x sc", "z", "99", "9", "2", ""])
-        self.print_filter_result("TOP-FC", result, "x sc")
+
+        result = self.run_commands(top_ssh, ["screen -x sc", "z", "99", "9", "2"])
+        self.print_filter_result("TOP-FC", result, "Fan Controls: Detailed")
+        time.sleep(delay)
+
+        print("Running Stress test on TOP FC please wait 2 minutes")
+        self.execute_command(top_ssh, "stress-ng --vm 8 --vm-bytes 80% -t 2m")
+        result = self.execute_command(top_ssh, "ls -s /sys/devices/system/edac/mc/mc0")
+        self.print_filter_result("TOP-FC", result, "Stress Command")
+        time.sleep(delay)
+
+        print("Running Stress test on Bottom FC please wait 2 minutes")
+        self.execute_command(bottom_ssh, "stress-ng --vm 8 --vm-bytes 80% -t 2m")
+        result = self.execute_command(bottom_ssh, "ls -s /sys/devices/system/edac/mc/mc0")
+        self.print_filter_result("Bottom-FC", result, "Stress Command")
+        time.sleep(delay)
+
+        result = self.run_commands(top_ssh, ["ssh uc1", "x sw0", "z", "1", "1", ""])
+        self.print_filter_result("TOP-FC", result, "Routes by sources")
+        time.sleep(delay)
+
         top_ssh.close()
         bottom_ssh.close()
         self.on_stop()
 
     def run_commands(self, ssh, commands):
         chan = ssh.invoke_shell(width=1000, height=1000)
-        for cmd in commands:
+        for index, cmd in enumerate(commands):
             chan.send(cmd + "\n")
             time.sleep(0.5)
-            if cmd != "":
+            if index != len(commands) - 1:
                 while chan.recv_ready():
                     chan.recv(1000)
         time.sleep(2)
-        timeout = 5  # Timeout in seconds
+        timeout = 3  # Timeout in seconds
         start_time = time.time()
         result = ""
-        print("hi")
         while True:
             if chan.recv_ready():
                 result += chan.recv(1000).decode("utf-8")
@@ -178,7 +200,6 @@ class Panel(wx.Panel):
                 time.sleep(0.1)
                 if time.time() - start_time > timeout:
                     break
-        print("bye")
         chan.close()
         return result
 
@@ -216,8 +237,8 @@ class Panel(wx.Panel):
         lines = result.split('\r\n')
         filtered_lines = [line for line in lines if line.strip() and '\r\r' not in line]
         filtered_result = '\n'.join(filtered_lines)
-        self.parent.output.append(f"{cmd}'s output {fc}\n\n{filtered_result}\n\n\n")
-        print(f"{cmd}'s output {fc}\n" + filtered_result)
+        self.parent.output.append(f"{cmd}'s output (Ran on {fc})\n\n{filtered_result}\n\n\n")
+        print(f"{cmd}'s output (Ran on {fc})\n" + filtered_result)
         print("-----------------------------------------------------------------------\n\n")
 
     def OnTimer(self, event):

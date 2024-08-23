@@ -4,23 +4,22 @@
 // Alias commands might not work, so you have to write the full command. Find the full command using "type your_cmd"
 
 CMDS
-// TOP-FC forallx uptime
-// TOP-FC forallx -b uptime
-// BOTTOM-FC forallx uptime
-// BOTTOM-FC forallx -b uptime
-// TOP-FC forallx screen -ls | grep "Sockets in"
-// TOP-FC forallx -fc /evertz/test/exe3/exe3_power.d/FC_PWR_I2C_CHECK.sh
-// TOP-FC forallx -lc /evertz/test/exe3/exe3_power.d/LC_PWR_I2C_CHECK.sh
-// TOP-FC forallx -xc /evertz/test/exe3/exe3_power.d/XC_PWR_I2C_CHECK.sh
-// TOP-FC forallx -uc /evertz/test/exe3/exe3_power.d/L2XC_PWR_I2C_CHECK.sh
-// TOP-FC forallx /evertz/test/exe3/exe3_power | grep "Total Power"
-// TOP-FC forallx -fc lspci -tv
-// TOP-FC forallx -xc lspci -tv
-// TOP-FC forallx -lc lspci -tv
-// TOP-FC forallx -uc lspci -tv
-// TOP-FC forallx altadietemp
-// TOP-FC SCREEN-CMD x fu $ show port all
-// BOTTOM-FC SCREEN-CMD x fu $ show port all
+TOP-FC forallx uptime
+TOP-FC forallx -b uptime
+BOTTOM-FC forallx uptime
+BOTTOM-FC forallx -b uptime
+TOP-FC forallx screen -ls | grep "Sockets in"
+TOP-FC forallx -fc /evertz/test/exe3/exe3_power.d/FC_PWR_I2C_CHECK.sh
+TOP-FC forallx -lc /evertz/test/exe3/exe3_power.d/LC_PWR_I2C_CHECK.sh
+TOP-FC forallx -xc /evertz/test/exe3/exe3_power.d/XC_PWR_I2C_CHECK.sh
+TOP-FC forallx -uc /evertz/test/exe3/exe3_power.d/L2XC_PWR_I2C_CHECK.sh
+TOP-FC forallx /evertz/test/exe3/exe3_power | grep "Total Power"
+TOP-FC forallx -fc lspci -tv
+TOP-FC forallx -xc lspci -tv
+TOP-FC forallx -lc lspci -tv
+TOP-FC forallx -uc lspci -tv
+TOP-FC forallx altadietemp
+TOP-FC SCREEN-CMD x fu $ show port all
+BOTTOM-FC SCREEN-CMD x fu $ show port all
 TOP-FC appstate diff
-// Some commands are remaining here
 END_CMDS
