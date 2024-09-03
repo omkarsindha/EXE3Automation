@@ -1,25 +1,29 @@
-// DO NOT change any labels in this file, you can add more commands between "CMDS" and "END_CMDS"
-// CMD should be written after by TOP-FC or BOTTOM-FC to denote where to run the command
-// "// " represents a comment (note the space)
-// Alias commands might not work, so you have to write the full command. Find the full command using "type your_cmd"
+// CMD should be written following TOP-FC or BOTTOM-FC to denote where to run the command
+// --> should be written between each subsequent command to denote the start of new command
+// "//" represents a comment
+// Alias commands might not work, so you have to write the full command. Find the full command using "type {your_cmd}"
 
-CMDS
-TOP-FC forallx uptime
-TOP-FC forallx -b uptime
-BOTTOM-FC forallx uptime
-BOTTOM-FC forallx -b uptime
-TOP-FC forallx screen -ls | grep "Sockets in"
-TOP-FC forallx -fc /evertz/test/exe3/exe3_power.d/FC_PWR_I2C_CHECK.sh
-TOP-FC forallx -lc /evertz/test/exe3/exe3_power.d/LC_PWR_I2C_CHECK.sh
-TOP-FC forallx -xc /evertz/test/exe3/exe3_power.d/XC_PWR_I2C_CHECK.sh
-TOP-FC forallx -uc /evertz/test/exe3/exe3_power.d/L2XC_PWR_I2C_CHECK.sh
-TOP-FC forallx /evertz/test/exe3/exe3_power | grep "Total Power"
-TOP-FC forallx -fc lspci -tv
-TOP-FC forallx -xc lspci -tv
-TOP-FC forallx -lc lspci -tv
-TOP-FC forallx -uc lspci -tv
-TOP-FC forallx altadietemp
-TOP-FC SCREEN-CMD x fu $ show port all
-BOTTOM-FC SCREEN-CMD x fu $ show port all
-TOP-FC appstate diff
-END_CMDS
+TOP-FC --> forallx uptime
+TOP-FC --> forallx -b uptime
+BOTTOM-FC --> forallx uptime
+BOTTOM-FC --> forallx -b uptime
+TOP-FC --> forallx screen -ls | grep "Sockets in"
+TOP-FC --> forallx -fc /evertz/test/exe3/exe3_power.d/FC_PWR_I2C_CHECK.sh
+TOP-FC --> forallx -lc /evertz/test/exe3/exe3_power.d/LC_PWR_I2C_CHECK.sh
+TOP-FC --> forallx -xc /evertz/test/exe3/exe3_power.d/XC_PWR_I2C_CHECK.sh
+TOP-FC --> forallx -uc /evertz/test/exe3/exe3_power.d/L2XC_PWR_I2C_CHECK.sh
+TOP-FC --> forallx /evertz/test/exe3/exe3_power | grep "Total Power"
+TOP-FC --> forallx -fc lspci -tv
+TOP-FC --> forallx -xc lspci -tv
+TOP-FC --> forallx -lc lspci -tv
+TOP-FC --> forallx -uc lspci -tv
+TOP-FC --> forallx altadietemp
+TOP-FC --> x fu --> show port all
+BOTTOM-FC --> x fu --> show port all
+TOP-FC --> appstate diff
+TOP-FC --> x sc --> z --> 99 --> 6 --> 1 --> <BLANK> --> <BLANK>
+TOP-FC --> x sc --> z --> 99 --> 6 --> 5 --> <BLANK>
+TOP-FC --> x sc --> z --> 99 --> 6 --> 6 --> <BLANK>
+TOP-FC --> x sc --> z --> 99 --> 6 --> 8 --> <BLANK>
+TOP-FC --> x sc --> z --> 99 --> 9 --> 2
+TOP-FC --> ssh uc1 --> x sw0 --> z --> 1 --> 1 --> <BLANK>

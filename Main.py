@@ -35,7 +35,7 @@ class MyFrame(wx.Frame):
 
         self.Bind(wx.EVT_CLOSE, self.OnClose)
 
-        self.SetTitle("EXE SSH Automation")
+        self.SetTitle("EXE 3 Sign Off Automation")
         self.SetSize((500, 500))
         self.Centre()
 
@@ -44,6 +44,7 @@ class MyFrame(wx.Frame):
         # Skip event by default, so it propagates the closing the application.
         event.Skip()
         self.panel.inProgress = False
+        self.panel.HandleClose()
 
     def on_about(self, event):
         info = wx.adv.AboutDialogInfo()

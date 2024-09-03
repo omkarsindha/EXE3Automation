@@ -17,7 +17,11 @@ class Panel(wx.Panel):
         self.Bind(wx.EVT_TIMER, self.OnTimer, self.timer)
 
         self.inProgress = False
+        self.top_ssh = None
+        self.bottom_ssh = None
+
         self.animation_counter: int = 0
+
         top_box = wx.StaticBox(self, label='Test Configuration')
         top_box.SetFont(wx.Font(wx.FontInfo(12).Bold()))
         top_box_sizer = wx.StaticBoxSizer(top_box)
@@ -61,6 +65,7 @@ class Panel(wx.Panel):
         top_box_sizer.Add(grid, 0, wx.EXPAND | wx.ALL, 5)
 
         self.text = wx.TextCtrl(self, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.VSCROLL | wx.EXPAND)
+        # Populating the text box with the commands from file
         self.text.WriteText("Commands\n\n")
         for cmd in self.config.CMDs:
             self.text.WriteText(cmd + "\n\n")
@@ -82,6 +87,7 @@ class Panel(wx.Panel):
         self.stop.Enable()
         self.start.Disable()
         self.inProgress = True
+        self.parent.output = []
         ip1 = self.ip1.GetValue()
         ip2 = self.ip2.GetValue()
         port = self.port.GetValue()
@@ -97,101 +103,88 @@ class Panel(wx.Panel):
         self.start.Enable()
         self.stop.Disable()
         self.inProgress = False
+
         if self.timer.IsRunning():
             self.timer.Stop()
         self.parent.SetStatusText("Complete :-)")
 
     def execute_ssh_cmds(self, ip1, ip2, port, delay):
-        top_ssh = paramiko.SSHClient()
-        top_ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.top_ssh = paramiko.SSHClient()
+        self.top_ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        bottom_ssh = paramiko.SSHClient()
-        bottom_ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.bottom_ssh = paramiko.SSHClient()
+        self.bottom_ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         try:
-            top_ssh.connect(ip1, port=port, username="root", password="evertz", timeout=3)
-            bottom_ssh.connect(ip2, port=port, username="root", password="evertz", timeout=3)
+            self.top_ssh.connect(ip1, port=port, username="root", password="evertz", timeout=3)
+            self.bottom_ssh.connect(ip2, port=port, username="root", password="evertz", timeout=3)
         except (paramiko.SSHException, IOError) as err:
             wx.MessageBox("Unable to SSH %s" % (str(err)), 'Error', wx.OK | wx.ICON_ERROR)
             self.on_stop()
             return
 
-        # Testing EXE
-        for c in self.config.CMDs:
-            if not self.inProgress:
-                top_ssh.close()
-                bottom_ssh.close()
-                return
-            parts = c.split()
-            cmd = ' '.join(parts[1:])
-            if parts[0] == "TOP-FC":
-                if cmd.split()[0] == "SCREEN-CMD":
-                    cm = ' '.join(cmd.split()[1:])
-                    result = self.execute_screen_command(top_ssh, cm)
-                else:
-                    result = self.execute_command(top_ssh, cmd)
-            elif parts[0] == "BOTTOM-FC":
-                if cmd.split()[0] == "SCREEN-CMD":
-                    cm = ' '.join(cmd.split()[1:])
-                    result = self.execute_screen_command(top_ssh, cm)
-                else:
-                    result = self.execute_command(bottom_ssh, cmd)
+        commands = []  # List of [[FC,[CMD1, CMD2]], [FC, [CMD1, CMD2, CMD3]]] where FC denotes where to run the command
 
-            self.print_filter_result(parts[0], result, cmd)
+        for c in self.config.CMDs:
+            parts = c.strip().split('-->')
+            if len(parts) > 1:
+                fc = parts[0].strip()
+                cmds = []
+                for cmd in parts[1:]:
+                    if cmd.strip() == "<BLANK>":  # If its <BLANK> simulate pressing enter without any input
+                        cmds.append("")
+                    else:
+                        cmds.append(cmd.strip())
+                commands.append([fc, cmds])
+
+        for c in commands:
+            if not self.inProgress:
+                self.HandleClose()
+                return
+            if c[0] == "TOP-FC":    # Checking the FC where the command needs to be executed on
+                result = self.run_commands(self.top_ssh, c[1])
+                self.print_filter_result(c[0], result, c[1])
+            elif c[0] == "BOTTOM-FC":
+                result = self.run_commands(self.bottom_ssh, c[1])
+                self.print_filter_result(c[0], result, c[1])
             time.sleep(delay)
 
-        result = self.run_commands(top_ssh, ["screen -x sc", "z", "99", "6", "1", "", ""])
-        self.print_filter_result("TOP-FC", result, "Routes by sources")
-        time.sleep(delay)
+        if not self.inProgress:
+            self.HandleClose()
+            return
 
-        result = self.run_commands(top_ssh, ["screen -x sc", "z", "99", "6", "5", ""])
-        self.print_filter_result("TOP-FC", result, "User Defect Cache")
-        time.sleep(delay)
-
-        result = self.run_commands(top_ssh, ["screen -x sc", "z", "99", "6", "6", ""])
-        self.print_filter_result("TOP-FC", result, "Defective Switch")
-        time.sleep(delay)
-
-        result = self.run_commands(top_ssh, ["screen -x sc", "z", "99", "6", "8", ""])
-        self.print_filter_result("TOP-FC", result, "Detected defective ports")
-        time.sleep(delay)
-
-        result = self.run_commands(top_ssh, ["screen -x sc", "z", "99", "9", "2"])
-        self.print_filter_result("TOP-FC", result, "Fan Controls: Detailed")
-        time.sleep(delay)
-
+        # Running stress test separately as the above loop cannot tell when the command has finished execution
         print("Running Stress test on TOP FC please wait 2 minutes")
-        self.execute_command(top_ssh, "stress-ng --vm 8 --vm-bytes 80% -t 2m")
-        result = self.execute_command(top_ssh, "ls -s /sys/devices/system/edac/mc/mc0")
+        self.execute_command(self.top_ssh, "stress-ng --vm 8 --vm-bytes 80% -t 2m")
+        result = self.execute_command(self.top_ssh, "ls -s /sys/devices/system/edac/mc/mc0")
         self.print_filter_result("TOP-FC", result, "Stress Command")
         time.sleep(delay)
 
+        if not self.inProgress:
+            self.HandleClose()
+            return
+
         print("Running Stress test on Bottom FC please wait 2 minutes")
-        self.execute_command(bottom_ssh, "stress-ng --vm 8 --vm-bytes 80% -t 2m")
-        result = self.execute_command(bottom_ssh, "ls -s /sys/devices/system/edac/mc/mc0")
+        self.execute_command(self.bottom_ssh, "stress-ng --vm 8 --vm-bytes 80% -t 2m")
+        result = self.execute_command(self.bottom_ssh, "ls -s /sys/devices/system/edac/mc/mc0")
         self.print_filter_result("Bottom-FC", result, "Stress Command")
         time.sleep(delay)
 
-        result = self.run_commands(top_ssh, ["ssh uc1", "x sw0", "z", "1", "1", ""])
-        self.print_filter_result("TOP-FC", result, "Routes by sources")
-        time.sleep(delay)
-
-        top_ssh.close()
-        bottom_ssh.close()
         self.on_stop()
 
     def run_commands(self, ssh, commands):
-        chan = ssh.invoke_shell(width=1000, height=1000)
+        """Method used to execute a chain of commands (Cannot tell when the command has finished execution)"""
+        chan = ssh.invoke_shell(width=1000, height=1000)      # Interactive shell same as putty
         for index, cmd in enumerate(commands):
-            chan.send(cmd + "\n")
+            chan.send(cmd + "\n")       # \n to denote pressing of enter
             time.sleep(0.5)
             if index != len(commands) - 1:
                 while chan.recv_ready():
                     chan.recv(1000)
-        time.sleep(2)
-        timeout = 3  # Timeout in seconds
+        timeout = 3
         start_time = time.time()
         result = ""
+        # Loop takes output from terminal until it has passed a certain time without any output
         while True:
             if chan.recv_ready():
                 result += chan.recv(1000).decode("utf-8")
@@ -204,6 +197,7 @@ class Panel(wx.Panel):
         return result
 
     def execute_command(self, ssh, cmd):
+        """Method used to execute standalone commands (Can tell when the command has finished execution)"""
         chan = ssh.get_transport().open_session()
         chan.get_pty()
         chan.exec_command(cmd)
@@ -215,25 +209,9 @@ class Panel(wx.Panel):
         chan.close()
         return result
 
-    def execute_screen_command(self, ssh, cmd):
-        split_cmd = cmd.split("$")
-        parts = [p.strip() for p in split_cmd]
-        screen = parts[0]
-        chan = ssh.invoke_shell()
-        result = ""
-        chan.send(screen + '\n')
-        time.sleep(1)
-        for item in parts[1:]:
-            chan.send(item + '\n')
-            time.sleep(2)
-            result += chan.recv(4096).decode("utf-8")
-            result += '\n'
-        chan.send('\x01')  # Ctrl+A
-        chan.send('d')
-        chan.close()
-        return result
-
     def print_filter_result(self, fc: str, result: str, cmd):
+        """Filters the result of the command and prints it in a nice human-readable format.
+        It also stores it in the output list to later save it as a text file"""
         lines = result.split('\r\n')
         filtered_lines = [line for line in lines if line.strip() and '\r\r' not in line]
         filtered_result = '\n'.join(filtered_lines)
@@ -245,3 +223,12 @@ class Panel(wx.Panel):
         """Called periodically while the flooder threads are running."""
         self.animation_counter += 1
         self.parent.SetStatusText(f"In progress{'.' * (self.animation_counter % 10)}")
+
+    def HandleClose(self):
+        """Closes the SSH Objects"""
+        if self.top_ssh:
+            self.top_ssh.close()
+            self.top_ssh = None
+        if self.bottom_ssh:
+            self.bottom_ssh.close()
+            self.bottom_ssh = None

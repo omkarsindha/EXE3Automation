@@ -1,0 +1,3 @@
+document the code                   done
+write note on the config.txt        done
+handle the close properly           done
